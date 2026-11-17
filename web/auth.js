@@ -21,10 +21,28 @@
 
     if (session?.user) {
       const result = await db.from("profiles")
-        .select("id,username,role")
+        .select("id,username,role,kick_requested_at,kick_acknowledged_at")
         .eq("id", session.user.id)
         .maybeSingle();
       profile = result.data || null;
+
+    if (profile?.kick_requested_at &&
+        (!profile.kick_acknowledged_at ||
+         new Date(profile.kick_requested_at) > new Date(profile.kick_acknowledged_at))) {
+      const ack = await db.rpc("frost_acknowledge_kick");
+      if (!ack.error) {
+        await db.auth.signOut();
+        session = null;
+        profile = null;
+        message = "Сессия завершена администратором.";
+        window.frostUser = null;
+        window.frostRole = "player";
+        window.frostIsStaff = false;
+        window.frostIsOwner = false;
+        if (typeof render === "function") render();
+        return;
+      }
+    }
     }
 
     window.frostUser = session?.user || null;
@@ -154,7 +172,7 @@
     usersBox.innerHTML = users.error
       ? `<p>${esc(users.error.message)}</p>`
       : (users.data || []).map(u => `
-        <div class="card" style="margin:10px 0">
+        <div class="card" data-frost-user="${esc(u.id)}" style="margin:10px 0">
           <b>${esc(u.username || "Player")}</b>
           <p>Роль: <b>${esc(u.role)}</b></p>
           ${window.frostIsOwner ? `
@@ -168,6 +186,66 @@
           ` : ""}
         </div>
       `).join("") || "<p>Пользователей пока нет.</p>";
+
+
+    if (window.frostIsStaff && !users.error) {
+      (users.data || []).forEach(u => {
+        if (u.id === window.frostUser?.id) return;
+        const card = usersBox.querySelector(`[data-frost-user="${u.id}"]`);
+        if (!card) return;
+
+        card.insertAdjacentHTML("beforeend", `
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+            <button class="primary" data-frost-mod="ban" data-id="${esc(u.id)}">Бан</button>
+            <button data-frost-mod="unban" data-id="${esc(u.id)}">Разбан</button>
+            <button data-frost-mod="kick" data-id="${esc(u.id)}">Кик</button>
+          </div>
+        `);
+      });
+
+      usersBox.querySelectorAll("[data-frost-mod]").forEach(button => {
+        button.onclick = async () => {
+          const action = button.dataset.frostMod;
+          const id = button.dataset.id;
+          const reason = prompt("Причина действия:") || "";
+
+          if (!confirm(
+            `${action === "ban" ? "Забанить" : action === "unban" ? "Разбанить" : "Кикнуть"} пользователя?`
+          )) return;
+
+          let duration_hours = 24;
+
+          if (action === "ban") {
+            const value = prompt("Срок бана в часах (от 1 до 8760):", "24");
+            if (value === null) return;
+            duration_hours = Number(value);
+            if (!Number.isInteger(duration_hours) || duration_hours < 1 || duration_hours > 8760) {
+              alert("Укажи целое число от 1 до 8760.");
+              return;
+            }
+          }
+
+          button.disabled = true;
+
+          const { data, error } = await db.functions.invoke("frost-moderation", {
+            body: { action, target_id: id, reason, duration_hours }
+          });
+
+          button.disabled = false;
+
+          if (error || data?.error) {
+            alert("Ошибка: " + (data?.error || error?.message || "Не удалось выполнить действие"));
+            return;
+          }
+
+          alert(action === "kick"
+            ? "Команда кика отправлена. Сессия завершится при следующей проверке сайта."
+            : action === "ban" ? "Пользователь заблокирован." : "Блокировка снята.");
+
+          await loadAdmin();
+        };
+      });
+    }
 
     usersBox.querySelectorAll("[data-frost-save-role]").forEach(button => {
       button.onclick = async () => {
@@ -216,4 +294,5 @@
   });
 
   refresh();
+  setInterval(refresh, 15000);
 })();
