@@ -179,9 +179,10 @@
         if (!confirm(`Изменить роль на ${nextRole.toUpperCase()}?`)) return;
 
         button.disabled = true;
-        const result = await db.from("profiles")
-          .update({ role: nextRole })
-          .eq("id", id);
+        const result = await db.rpc("frost_set_role", {
+            target_id: id,
+            new_role: nextRole
+          });
 
         if (result.error) {
           alert("Ошибка: " + result.error.message);
