@@ -31,7 +31,7 @@
     window.frostRole = profile?.role || "player";
     role = window.frostRole === "owner" ? "Owner" :
            window.frostRole === "admin" ? "Admin" : "Player";
-    window.frostIsStaff = ["admin", "owner"].includes(window.frostRole);
+    window.frostIsStaff = ["admin", "owner", "moderator"].includes(window.frostRole);
     window.frostIsOwner = window.frostRole === "owner";
 
     if (typeof render === "function") render();
@@ -64,6 +64,8 @@
           <h3>Роли и доступ</h3>
           <p><b>Player</b> — визуалы, HUD и профили.</p>
           <p><b>Admin</b> — управление новостями и релизами.</p>
+                    <p><b>Moderator</b> — модерация пользователей.</p>
+                    <p><b>YouTuber</b> — специальная отметка автора.</p>
           <p><b>Owner</b> — управление проектом и ролями.</p>
           <div class="notice">Права загружаются из Supabase. Выбор роли в браузере больше не выдаёт привилегий.</div>
         </div>
@@ -158,8 +160,9 @@
           ${window.frostIsOwner ? `
             <select data-frost-role="${esc(u.id)}">
               <option value="player" ${u.role === "player" ? "selected" : ""}>Player</option>
+              <option value="moderator" ${u.role === "moderator" ? "selected" : ""}>Moderator</option>
+              <option value="youtuber" ${u.role === "youtuber" ? "selected" : ""}>YouTuber</option>
               <option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option>
-              <option value="owner" ${u.role === "owner" ? "selected" : ""}>Owner</option>
             </select>
             <button class="primary" data-frost-save-role="${esc(u.id)}" ${u.id === window.frostUser?.id ? "disabled" : ""}>Сохранить роль</button>
           ` : ""}
@@ -172,7 +175,7 @@
         const id = button.dataset.frostSaveRole;
         const select = usersBox.querySelector(`[data-frost-role="${id}"]`);
         const nextRole = select?.value;
-        if (!["player", "admin", "owner"].includes(nextRole)) return;
+        if (!["player", "admin", "moderator", "youtuber"].includes(nextRole)) return;
         if (!confirm(`Изменить роль на ${nextRole.toUpperCase()}?`)) return;
 
         button.disabled = true;
