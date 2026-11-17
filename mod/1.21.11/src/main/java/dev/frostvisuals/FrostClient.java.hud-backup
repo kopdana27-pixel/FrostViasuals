@@ -1,0 +1,81 @@
+package dev.frostvisuals;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import com.mojang.blaze3d.platform.InputConstants;
+import org.lwjgl.glfw.GLFW;
+
+public class FrostClient implements ClientModInitializer {
+    private static KeyMapping menu;
+
+    @Override
+    public void onInitializeClient() {
+        KeyMapping.Category category = KeyMapping.Category.register(
+            Identifier.fromNamespaceAndPath("frostvisuals", "main")
+        );
+        menu = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            "key.frostvisuals.menu",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_RIGHT_SHIFT,
+            category
+        ));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (menu.consumeClick()) {
+                if (client.player != null) {
+                    client.setScreen(new FrostMenu());
+                }
+            }
+        });
+    }
+
+    public static class FrostMenu extends Screen {
+        protected FrostMenu() {
+            super(Component.literal("FROST VISUALS"));
+        }
+
+        @Override
+        protected void init() {
+            int center = width / 2;
+            int y = height / 2 - 55;
+
+            addRenderableWidget(Button.builder(Component.literal("HUD"), b -> {})
+                .bounds(center - 100, y, 200, 24).build());
+            addRenderableWidget(Button.builder(Component.literal("Интерфейс"), b -> {})
+                .bounds(center - 100, y + 30, 200, 24).build());
+            addRenderableWidget(Button.builder(Component.literal("Эффекты"), b -> {})
+                .bounds(center - 100, y + 60, 200, 24).build());
+            addRenderableWidget(Button.builder(Component.literal("Настройки"), b -> {})
+                .bounds(center - 100, y + 90, 200, 24).build());
+            addRenderableWidget(Button.builder(Component.literal("Закрыть"), b -> onClose())
+                .bounds(center - 100, y + 125, 200, 24).build());
+        }
+
+        @Override
+        public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+            renderBackground(graphics, mouseX, mouseY, partialTick);
+            graphics.fill(width / 2 - 125, height / 2 - 105,
+                width / 2 + 125, height / 2 + 165, 0xEE101722);
+            graphics.fill(width / 2 - 125, height / 2 - 105,
+                width / 2 + 125, height / 2 - 102, 0xFF65D9FF);
+            graphics.drawCenteredString(font, Component.literal("FROST VISUALS"),
+                width / 2, height / 2 - 90, 0xFFBDEEFF);
+            graphics.drawCenteredString(font, Component.literal("Ваш визуал. Ваш стиль."),
+                width / 2, height / 2 - 76, 0xFFAAAAAA);
+            super.render(graphics, mouseX, mouseY, partialTick);
+        }
+
+        @Override
+        public boolean isPauseScreen() {
+            return false;
+        }
+    }
+}

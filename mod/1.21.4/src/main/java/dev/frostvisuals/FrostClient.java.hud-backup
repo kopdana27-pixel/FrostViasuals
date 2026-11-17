@@ -1,0 +1,76 @@
+package dev.frostvisuals;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
+import org.lwjgl.glfw.GLFW;
+
+public class FrostClient implements ClientModInitializer {
+    private static KeyBinding menu;
+
+    @Override
+    public void onInitializeClient() {
+        menu = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+            "key.frostvisuals.menu",
+            InputUtil.Type.KEYSYM,
+            GLFW.GLFW_KEY_RIGHT_SHIFT,
+            "category.frostvisuals"
+        ));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (menu.wasPressed()) {
+                if (client.player != null) {
+                    client.setScreen(new FrostMenu());
+                }
+            }
+        });
+    }
+
+    public static class FrostMenu extends Screen {
+        protected FrostMenu() {
+            super(Text.literal("FROST VISUALS"));
+        }
+
+        @Override
+        protected void init() {
+            int center = width / 2;
+            int y = height / 2 - 55;
+
+            addDrawableChild(ButtonWidget.builder(Text.literal("HUD"), b -> {})
+                .dimensions(center - 100, y, 200, 24).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Интерфейс"), b -> {})
+                .dimensions(center - 100, y + 30, 200, 24).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Эффекты"), b -> {})
+                .dimensions(center - 100, y + 60, 200, 24).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Настройки"), b -> {})
+                .dimensions(center - 100, y + 90, 200, 24).build());
+            addDrawableChild(ButtonWidget.builder(Text.literal("Закрыть"), b -> close())
+                .dimensions(center - 100, y + 125, 200, 24).build());
+        }
+
+        @Override
+        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+            renderBackground(context, mouseX, mouseY, delta);
+            context.fill(width / 2 - 125, height / 2 - 105,
+                width / 2 + 125, height / 2 + 165, 0xEE101722);
+            context.fill(width / 2 - 125, height / 2 - 105,
+                width / 2 + 125, height / 2 - 102, 0xFF65D9FF);
+            context.drawCenteredTextWithShadow(textRenderer,
+                Text.literal("FROST VISUALS"), width / 2, height / 2 - 90, 0xFFBDEEFF);
+            context.drawCenteredTextWithShadow(textRenderer,
+                Text.literal("Ваш визуал. Ваш стиль."), width / 2, height / 2 - 76, 0xFFAAAAAA);
+            super.render(context, mouseX, mouseY, delta);
+        }
+
+        @Override
+        public boolean shouldPause() {
+            return false;
+        }
+    }
+}

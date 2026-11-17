@@ -1,0 +1,12 @@
+# Команды для Termux после распаковки архива в Downloads
+termux-setup-storage
+pkg update -y && pkg upgrade -y
+pkg install nodejs-lts unzip -y
+mkdir -p ~/FrostVisuals3
+cp -r ~/storage/downloads/FrostVisuals_3/. ~/FrostVisuals3/
+cd ~/FrostVisuals3
+npx netlify login
+npx netlify deploy --prod --dir web
+
+# API публикуется отдельно (например, на Node.js-хостинге), не на статическом Netlify.
+# Не вводи пароли/токены в публичный чат.

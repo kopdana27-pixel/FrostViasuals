@@ -1,0 +1,7 @@
+package dev.frostvisuals;
+import net.fabricmc.api.ClientModInitializer;
+public final class FrostClient implements ClientModInitializer {
+  @Override public void onInitializeClient() {
+    System.out.println("[Frost Visuals] Client initialized for Minecraft 1.21.11");
+  }
+}
