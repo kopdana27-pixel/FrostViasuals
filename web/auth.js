@@ -151,13 +151,58 @@
 
     usersBox.innerHTML = users.error
       ? `<p>${esc(users.error.message)}</p>`
-      : (users.data || []).map(u => `<p><b>${esc(u.username || "Player")}</b> — ${esc(u.role)}</p>`).join("") || "<p>Пользователей пока нет.</p>";
+      : (users.data || []).map(u => `
+        <div class="card" style="margin:10px 0">
+          <b>${esc(u.username || "Player")}</b>
+          <p>Роль: <b>${esc(u.role)}</b></p>
+          ${window.frostIsOwner ? `
+            <select data-frost-role="${esc(u.id)}">
+              <option value="player" ${u.role === "player" ? "selected" : ""}>Player</option>
+              <option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option>
+              <option value="owner" ${u.role === "owner" ? "selected" : ""}>Owner</option>
+            </select>
+            <button class="primary" data-frost-save-role="${esc(u.id)}" ${u.id === window.frostUser?.id ? "disabled" : ""}>Сохранить роль</button>
+          ` : ""}
+        </div>
+      `).join("") || "<p>Пользователей пока нет.</p>";
 
-    releasesBox.innerHTML = releases.error
+    usersBox.querySelectorAll("[data-frost-save-role]").forEach(button => {
+      button.onclick = async () => {
+        if (!window.frostIsOwner) return;
+        const id = button.dataset.frostSaveRole;
+        const select = usersBox.querySelector(`[data-frost-role="${id}"]`);
+        const nextRole = select?.value;
+        if (!["player", "admin", "owner"].includes(nextRole)) return;
+        if (!confirm(`Изменить роль на ${nextRole.toUpperCase()}?`)) return;
+
+        button.disabled = true;
+        const result = await db.from("profiles")
+          .update({ role: nextRole })
+          .eq("id", id);
+
+        if (result.error) {
+          alert("Ошибка: " + result.error.message);
+          button.disabled = false;
+          return;
+        }
+
+        await db.from("audit_logs").insert({
+          actor_id: window.frostUser.id,
+          target_id: id,
+          action: "role_changed",
+          details: { role: nextRole }
+        });
+
+        alert("Роль изменена.");
+        await loadAdmin();
+      };
+    });
+
+    if (releasesBox) releasesBox.innerHTML = releases.error
       ? `<p>${esc(releases.error.message)}</p>`
       : (releases.data || []).map(r => `<p><b>${esc(r.version)}</b> · Minecraft ${esc(r.minecraft_version)} · ${r.published ? "Опубликован" : "Черновик"}</p>`).join("") || "<p>Релизов пока нет.</p>";
 
-    newsBox.innerHTML = news.error
+    if (newsBox) newsBox.innerHTML = news.error
       ? `<p>${esc(news.error.message)}</p>`
       : (news.data || []).map(n => `<p><b>${esc(n.title)}</b> · ${n.published ? "Опубликована" : "Черновик"}</p>`).join("") || "<p>Новостей пока нет.</p>";
   }
